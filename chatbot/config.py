@@ -44,12 +44,16 @@ class ProviderConfig:
 class Config:
     """Main configuration class."""
 
-    def __init__(self):
-        """Initialize configuration from environment variables."""
+    def __init__(self, vector_store_override: Optional[str] = None):
+        """Initialize configuration from environment variables.
+        
+        Args:
+            vector_store_override: Optional vector store type to use instead of environment variable
+        """
         load_dotenv()
 
         # Cache configuration
-        vector_store = os.getenv("VECTOR_STORE", "pinecone").lower()
+        vector_store = vector_store_override or os.getenv("VECTOR_STORE", "pinecone").lower()
         try:
             vector_store_type = VectorStoreType(vector_store)
         except ValueError:

@@ -103,18 +103,24 @@ def cli():
     type=click.Choice(["openai", "anthropic"]),
     help="LLM provider to use (overrides DEFAULT_PROVIDER setting)",
 )
-def chat(system_prompt: Optional[str], provider: Optional[str]):
+@click.option(
+    "--vector-store",
+    "-v",
+    type=click.Choice(["pinecone", "qdrant"]),
+    help="Vector store to use (overrides VECTOR_STORE setting)",
+)
+def chat(system_prompt: Optional[str], provider: Optional[str], vector_store: Optional[str]):
     """Start an interactive chat session."""
     try:
         # Load configuration
-        config = Config()
+        config = Config(vector_store_override=vector_store)
 
         # Initialize OpenAI client for embeddings
         openai_client = AsyncOpenAI(api_key=config.provider.openai_api_key)
 
         # Initialize provider and cache manager
-        provider = get_provider(config, provider)
-        cache_manager = CacheManager(config, openai_client, provider)
+        llm_provider = get_provider(config, provider)
+        cache_manager = CacheManager(config, openai_client, llm_provider)
 
         # Run chat loop
         asyncio.run(chat_loop(cache_manager, system_prompt))
@@ -125,18 +131,24 @@ def chat(system_prompt: Optional[str], provider: Optional[str]):
 
 
 @cli.command()
-def cleanup():
+@click.option(
+    "--vector-store",
+    "-v",
+    type=click.Choice(["pinecone", "qdrant"]),
+    help="Vector store to use (overrides VECTOR_STORE setting)",
+)
+def cleanup(vector_store: Optional[str]):
     """Clean up old cache entries."""
     try:
         # Load configuration
-        config = Config()
+        config = Config(vector_store_override=vector_store)
 
         # Initialize OpenAI client for embeddings
         openai_client = AsyncOpenAI(api_key=config.provider.openai_api_key)
 
         # Initialize provider and cache manager
-        provider = get_provider(config, None)
-        cache_manager = CacheManager(config, openai_client, provider)
+        llm_provider = get_provider(config, None)
+        cache_manager = CacheManager(config, openai_client, llm_provider)
 
         # Run cleanup
         removed = asyncio.run(cache_manager.cleanup())
