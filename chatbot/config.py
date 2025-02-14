@@ -44,11 +44,16 @@ class ProviderConfig:
 class Config:
     """Main configuration class."""
 
-    def __init__(self, vector_store_override: Optional[str] = None):
+    def __init__(
+        self,
+        vector_store_override: Optional[str] = None,
+        ttl_days_override: Optional[int] = None
+    ):
         """Initialize configuration from environment variables.
         
         Args:
             vector_store_override: Optional vector store type to use instead of environment variable
+            ttl_days_override: Optional TTL days to use instead of environment variable
         """
         load_dotenv()
 
@@ -67,7 +72,7 @@ class Config:
             index_name=os.getenv("VECTOR_INDEX_NAME", "chatbot"),
             namespace=os.getenv("VECTOR_NAMESPACE", "default"),
             similarity_threshold=float(os.getenv("SIMILARITY_THRESHOLD", "0.85")),
-            ttl_days=int(os.getenv("CACHE_TTL_DAYS", "30")),
+            ttl_days=ttl_days_override or int(os.getenv("CACHE_TTL_DAYS", "30")),
         )
 
         # Provider configuration

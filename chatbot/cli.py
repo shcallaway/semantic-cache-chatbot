@@ -51,6 +51,7 @@ async def chat_loop(
     """
     click.echo("Welcome to Semantic Chatbot! Type 'exit' to quit.")
     click.echo("Using provider: " + cache_manager.provider.provider_name)
+    click.echo("Using vector store: " + cache_manager.config.cache.vector_store.value)
     click.echo()
 
     while True:
@@ -137,11 +138,20 @@ def chat(system_prompt: Optional[str], provider: Optional[str], vector_store: Op
     type=click.Choice(["pinecone", "qdrant"]),
     help="Vector store to use (overrides VECTOR_STORE setting)",
 )
-def cleanup(vector_store: Optional[str]):
+@click.option(
+    "--ttl-days",
+    "-t",
+    type=int,
+    help="Number of days to keep entries (overrides CACHE_TTL_DAYS setting)",
+)
+def cleanup(vector_store: Optional[str], ttl_days: Optional[int]):
     """Clean up old cache entries."""
     try:
         # Load configuration
-        config = Config(vector_store_override=vector_store)
+        config = Config(
+            vector_store_override=vector_store,
+            ttl_days_override=ttl_days
+        )
 
         # Initialize OpenAI client for embeddings
         openai_client = AsyncOpenAI(api_key=config.provider.openai_api_key)
@@ -166,3 +176,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

@@ -154,21 +154,75 @@ class PineconeVectorStore(BaseVectorStore):
 
         return entries
 
+    def get_total_entries(self) -> int:
+        """Get total number of entries in the vector store.
+
+        Returns:
+            Total number of entries
+        """
+        try:
+            stats = self.index.describe_index_stats()
+            return stats.total_vector_count
+        except Exception as e:
+            print(f"Warning: Failed to get entry count - {str(e)}")
+            return 0
+
     def cleanup_old_entries(self) -> int:
         """Remove entries older than the TTL.
 
         Returns:
             Number of entries removed
         """
-        cutoff_time = time.time() - (self.config.ttl_days * 24 * 60 * 60)
+        # Get initial count
+        initial_count = self.get_total_entries()
+        print(f"Current number of entries: {initial_count}")
         
-        # Delete old vectors
-        delete_response = self.index.delete(
-            filter={
-                "timestamp": {"$lt": cutoff_time}
-            },
-            namespace=self.config.namespace,
-        )
-        
-        # In v3, delete response is a dict with 'deleted_count' key
-        return delete_response.get('deleted_count', 0)
+        try:
+            if self.config.ttl_days == 0:
+                # If TTL is 0, delete all entries
+                self.index.delete(
+                    delete_all=True,
+                    namespace=self.config.namespace
+                )
+                final_count = self.get_total_entries()
+                deleted = initial_count - final_count
+                print(f"Successfully cleaned up all {deleted} entries")
+                print(f"Total entries: {initial_count} -> {final_count}")
+                return deleted
+                
+            # Otherwise, only clean up old entries
+            cutoff_time = time.time() - (self.config.ttl_days * 24 * 60 * 60)
+            query_response = self.index.query(
+                vector=[0.0] * 1536,  # Dummy vector for metadata-only query
+                top_k=10000,
+                namespace=self.config.namespace,
+                filter={"timestamp": {"$lt": cutoff_time}},
+                include_metadata=True
+            )
+            
+            # Get IDs of old vectors
+            old_ids = [match['id'] for match in query_response['matches']]
+            
+            if not old_ids:
+                print("No old entries found to clean up")
+                return 0
+                
+            # Delete the old vectors by ID
+            delete_response = self.index.delete(
+                ids=old_ids,
+                namespace=self.config.namespace
+            )
+            
+            deleted = len(old_ids)
+            
+            # Get final count after cleanup
+            final_count = self.get_total_entries()
+            
+            print(f"Successfully cleaned up {deleted} old cache entries")
+            print(f"Total entries: {initial_count} -> {final_count}")
+            
+            return deleted
+            
+        except Exception as e:
+            print(f"Warning: Cache cleanup failed - {str(e)}")
+            return 0
