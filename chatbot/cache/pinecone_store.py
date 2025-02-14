@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 
 from openai import AsyncOpenAI
 from pinecone import Pinecone
+from pinecone import PineconeException
 
 from chatbot.cache.base import BaseVectorStore, CacheEntry
 from chatbot.config import CacheConfig
@@ -31,15 +32,34 @@ class PineconeVectorStore(BaseVectorStore):
         # Initialize Pinecone
         self.pc = Pinecone(api_key=config.pinecone_api_key)
         
-        # Create index if it doesn't exist
-        if config.index_name not in [index.name for index in self.pc.list_indexes()]:
-            self.pc.create_index(
-                name=config.index_name,
-                dimension=1536,  # OpenAI embedding dimension
-                metric="cosine",
-            )
-        
-        self.index = self.pc.Index(config.index_name)
+        try:
+            # Try to get the index if it exists
+            self.index = self.pc.Index(config.index_name)
+        except PineconeException as e:
+            if "index not found" in str(e).lower():
+                # Only try to create if index doesn't exist
+                try:
+                    self.pc.create_index(
+                        name=config.index_name,
+                        dimension=1536,  # OpenAI embedding dimension
+                        metric="cosine",
+                        spec={
+                            "pod": {
+                                "environment": "us-east-1-aws",
+                                "pod_type": "starter"
+                            }
+                        }
+                    )
+                    self.index = self.pc.Index(config.index_name)
+                except PineconeException as create_error:
+                    if "max pods allowed" in str(create_error).lower():
+                        raise RuntimeError(
+                            "Unable to create new Pinecone index - maximum pods reached. "
+                            "Please delete unused indexes or upgrade your plan."
+                        ) from create_error
+                    raise
+            else:
+                raise
 
     async def store(
         self,
