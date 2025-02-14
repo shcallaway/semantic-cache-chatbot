@@ -14,16 +14,18 @@ from chatbot.providers.anthropic import AnthropicProvider
 from chatbot.providers.openai import OpenAIProvider
 
 
-def get_provider(config: Config):
+def get_provider(config: Config, provider_override: Optional[str] = None):
     """Get the configured LLM provider.
 
     Args:
         config: Application configuration
+        provider_override: Optional provider to use instead of default
 
     Returns:
         Configured LLM provider instance
     """
-    if config.provider.default_provider == "openai":
+    provider = provider_override or config.provider.default_provider
+    if provider == "openai":
         return OpenAIProvider(
             api_key=config.provider.openai_api_key,
             temperature=config.provider.temperature,
@@ -91,7 +93,13 @@ def cli():
     "-s",
     help="System prompt to guide the model's behavior",
 )
-def chat(system_prompt: Optional[str]):
+@click.option(
+    "--provider",
+    "-p",
+    type=click.Choice(["openai", "anthropic"]),
+    help="LLM provider to use (overrides DEFAULT_PROVIDER setting)",
+)
+def chat(system_prompt: Optional[str], provider: Optional[str]):
     """Start an interactive chat session."""
     try:
         # Load configuration
@@ -101,7 +109,7 @@ def chat(system_prompt: Optional[str]):
         openai_client = AsyncOpenAI(api_key=config.provider.openai_api_key)
 
         # Initialize provider and cache manager
-        provider = get_provider(config)
+        provider = get_provider(config, provider)
         cache_manager = CacheManager(config, openai_client, provider)
 
         # Run chat loop
@@ -123,7 +131,7 @@ def cleanup():
         openai_client = AsyncOpenAI(api_key=config.provider.openai_api_key)
 
         # Initialize provider and cache manager
-        provider = get_provider(config)
+        provider = get_provider(config, None)
         cache_manager = CacheManager(config, openai_client, provider)
 
         # Run cleanup
