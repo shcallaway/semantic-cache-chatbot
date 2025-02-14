@@ -34,7 +34,7 @@ class CacheManager:
         self,
         question: str,
         system_prompt: Optional[str] = None,
-    ) -> Tuple[str, bool]:
+    ) -> Tuple[str, bool, Optional[Tuple[str, float]]]:
         """Get a response for the question, using cache if available.
 
         Args:
@@ -42,7 +42,7 @@ class CacheManager:
             system_prompt: Optional system prompt for the LLM
 
         Returns:
-            Tuple of (response text, whether it was from cache)
+            Tuple of (response text, whether it was from cache, optional tuple of (matched question, similarity score))
         """
         # Try to find similar questions in cache
         similar_entries = await self.vector_store.find_similar(question)
@@ -50,7 +50,7 @@ class CacheManager:
         # If we found a similar enough question, use its cached answer
         if similar_entries:
             entry, similarity = similar_entries[0]
-            return entry.answer, True
+            return entry.answer, True, (entry.question, similarity)
 
         # Otherwise, generate a new response
         response = await self.provider.generate_response(
@@ -68,7 +68,7 @@ class CacheManager:
             provider=self.provider.provider_name,
         )
 
-        return response, False
+        return response, False, None
 
     async def cleanup(self) -> int:
         """Clean up old cache entries.

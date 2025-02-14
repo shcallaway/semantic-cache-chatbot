@@ -99,11 +99,12 @@ async def test_get_response_cache_hit(cache_manager):
     )
 
     # Get response
-    response, from_cache = await cache_manager.get_response("test question")
+    response, from_cache, cache_info = await cache_manager.get_response("test question")
 
     # Verify cache was used
     assert response == "cached answer"
     assert from_cache is True
+    assert cache_info == ("test question", 0.95)
     cache_manager.vector_store.find_similar.assert_called_once()
     cache_manager.vector_store.store.assert_not_called()
     cache_manager.provider.generate_response.assert_not_called()
@@ -118,11 +119,12 @@ async def test_get_response_cache_miss(cache_manager):
     cache_manager.provider.generate_response.return_value = "Generated response"
 
     # Get response
-    response, from_cache = await cache_manager.get_response("test question")
+    response, from_cache, cache_info = await cache_manager.get_response("test question")
 
     # Verify LLM was used and response was cached
     assert response == "Generated response"
     assert from_cache is False
+    assert cache_info is None
     cache_manager.vector_store.find_similar.assert_called_once()
     cache_manager.vector_store.store.assert_called_once()
     cache_manager.provider.generate_response.assert_called_once_with(
@@ -143,11 +145,12 @@ async def test_get_response_with_system_prompt(cache_manager):
 
     # Get response with system prompt
     system_prompt = "Custom system prompt"
-    response, from_cache = await cache_manager.get_response("test question", system_prompt=system_prompt)
+    response, from_cache, cache_info = await cache_manager.get_response("test question", system_prompt=system_prompt)
 
     # Verify system prompt was passed to provider
     assert response == "Generated response with system prompt"
     assert from_cache is False
+    assert cache_info is None
     cache_manager.provider.generate_response.assert_called_once_with(
         prompt="test question",
         system_prompt=system_prompt,

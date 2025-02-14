@@ -62,18 +62,22 @@ async def chat_loop(
 
         try:
             # Get response (from cache or LLM)
-            response, from_cache = await cache_manager.get_response(
+            response, from_cache, cache_info = await cache_manager.get_response(
                 question=question,
                 system_prompt=system_prompt,
             )
 
             # Display response
             click.echo()
-            if from_cache:
+            if from_cache and cache_info:
+                matched_q, similarity = cache_info
                 click.secho("Bot (cached)", fg="green", nl=False)
+                click.echo("> " + response)
+                click.secho(f"Cache hit: {similarity:.2%} similar to: {matched_q}", fg="green")
             else:
                 click.secho("Bot", fg="blue", nl=False)
-            click.echo("> " + response)
+                click.echo("> " + response)
+                click.secho("Cache miss: No similar questions found", fg="yellow")
             click.echo()
 
         except Exception as e:
