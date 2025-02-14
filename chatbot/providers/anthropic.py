@@ -1,9 +1,9 @@
 """
 Anthropic provider implementation using Claude.
 """
+
 from typing import Optional
 
-import anthropic
 from anthropic import AsyncAnthropic
 
 from chatbot.providers.base import LLMProvider
@@ -21,7 +21,9 @@ class AnthropicProvider(LLMProvider):
         """
         super().__init__(api_key, **kwargs)
         self.client = AsyncAnthropic(api_key=api_key)
-        self._model = kwargs.get("model", "claude-3-opus-20240229")  # or claude-3-sonnet-20240229 for a smaller model
+        self._model = kwargs.get(
+            "model", "claude-3-opus-20240229"
+        )  # or claude-3-sonnet-20240229 for a smaller model
         self._system_prompt = kwargs.get(
             "system_prompt",
             "You are Claude, a helpful AI assistant. Provide clear, accurate, and concise responses.",
@@ -90,8 +92,10 @@ class AnthropicProvider(LLMProvider):
             Dictionary of default configuration values
         """
         config = super().default_config
-        config.update({
-            "model": "claude-3-opus-20240229",  # or claude-3-sonnet-20240229 for a smaller model
-            "max_tokens": 1024,
-        })
+        config.update(
+            {
+                "model": "claude-3-opus-20240229",  # or claude-3-sonnet-20240229 for a smaller model
+                "max_tokens": 1024,
+            }
+        )
         return config

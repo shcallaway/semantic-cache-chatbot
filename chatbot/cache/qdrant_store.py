@@ -1,6 +1,7 @@
 """
 Vector store implementation using Qdrant.
 """
+
 import time
 from typing import List, Optional, Tuple
 
@@ -27,13 +28,13 @@ class QdrantVectorStore(BaseVectorStore):
         """
         self.config = config
         self.openai_client = openai_client
-        
+
         # Initialize Qdrant client
         self.client = QdrantClient(
             url=config.qdrant_url,
             api_key=config.qdrant_api_key,
         )
-        
+
         # Create collection if it doesn't exist
         try:
             self.client.get_collection(config.index_name)
@@ -178,9 +179,9 @@ class QdrantVectorStore(BaseVectorStore):
                         ]
                     ),
                 )
-            
+
             return result.deleted_count
-            
+
         except Exception as e:
             print(f"Warning: Cache cleanup failed - {str(e)}")
             return 0

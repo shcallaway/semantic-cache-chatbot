@@ -1,6 +1,7 @@
 """
 OpenAI provider implementation.
 """
+
 from typing import Optional
 
 from openai import AsyncOpenAI
@@ -22,9 +23,7 @@ class OpenAIProvider(LLMProvider):
         super().__init__(api_key, **kwargs)
         self.client = AsyncOpenAI(api_key=api_key)
         self._model = kwargs.get("model", "gpt-3.5-turbo")
-        self._embedding_model = kwargs.get(
-            "embedding_model", "text-embedding-ada-002"
-        )
+        self._embedding_model = kwargs.get("embedding_model", "text-embedding-ada-002")
 
     @property
     def provider_name(self) -> str:
@@ -53,12 +52,12 @@ class OpenAIProvider(LLMProvider):
             The generated response text
         """
         messages = []
-        
+
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         else:
             messages.append({"role": "system", "content": self.default_system_prompt})
-        
+
         messages.append({"role": "user", "content": prompt})
 
         response: ChatCompletion = await self.client.chat.completions.create(

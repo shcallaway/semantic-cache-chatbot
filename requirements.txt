@@ -6,3 +6,7 @@ python-dotenv>=1.0.0
 click>=8.0.0
 pytest>=7.0.0
 urllib3>=2.0.0
+
+# Development dependencies
+flake8>=7.0.0
+black>=24.1.0

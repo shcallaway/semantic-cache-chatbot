@@ -35,7 +35,7 @@ chmod +x setup_dev.sh
 This will:
 
 - Create a Python virtual environment
-- Install all dependencies including development tools
+- Install all dependencies including development tools (pytest, black, flake8)
 - Create a .env file from the example template
 
 Alternatively, you can set up manually:
@@ -147,8 +147,26 @@ python -m chatbot.cli
 
 ## Development
 
+### Code Linting
+
+The project uses black for code formatting and flake8 for style checking:
+
+```bash
+# Format code with black
+black .
+
+# Check code style with flake8
+flake8
+```
+
+Configuration files:
+
+- `.flake8`: Flake8 configuration with 88 character line length to match black
+- `pyproject.toml`: Black configuration and build settings
+
 ### Running Tests
 
+The project uses pytest with async support for testing:
 The project uses pytest with async support for testing:
 
 ```bash

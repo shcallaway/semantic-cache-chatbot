@@ -1,6 +1,7 @@
 """
-Command-line interface for the semantic chatbot.
+Command-line interface for the Semantic Cache Chatbot.
 """
+
 import asyncio
 import sys
 from typing import Optional
@@ -49,7 +50,7 @@ async def chat_loop(
         cache_manager: Cache manager instance
         system_prompt: Optional system prompt for the LLM
     """
-    click.echo("Welcome to Semantic Chatbot! Type 'exit' to quit.")
+    click.echo("Welcome to Semantic Cache Chatbot! Type 'exit' to quit.")
     click.echo("Using provider: " + cache_manager.provider.provider_name)
     click.echo("Using vector store: " + cache_manager.config.cache.vector_store.value)
     click.echo()
@@ -57,7 +58,7 @@ async def chat_loop(
     while True:
         # Get user input
         question = click.prompt("You", prompt_suffix="> ", type=str)
-        
+
         if question.lower() in ["exit", "quit"]:
             break
 
@@ -74,7 +75,9 @@ async def chat_loop(
                 matched_q, similarity = cache_info
                 click.secho("Bot (cached)", fg="green", nl=False)
                 click.echo("> " + response)
-                click.secho(f"Cache hit: {similarity:.2%} similar to: {matched_q}", fg="green")
+                click.secho(
+                    f"Cache hit: {similarity:.2%} similar to: {matched_q}", fg="green"
+                )
             else:
                 click.secho("Bot", fg="blue", nl=False)
                 click.echo("> " + response)
@@ -88,7 +91,7 @@ async def chat_loop(
 
 @click.group()
 def cli():
-    """Semantic Chatbot - A terminal chatbot with semantic caching."""
+    """Semantic Cache Chatbot - A terminal chatbot with semantic caching."""
     pass
 
 
@@ -110,11 +113,31 @@ def cli():
     type=click.Choice(["pinecone", "qdrant"]),
     help="Vector store to use (overrides VECTOR_STORE setting)",
 )
-def chat(system_prompt: Optional[str], provider: Optional[str], vector_store: Optional[str]):
+@click.option(
+    "--vector-index",
+    "-i",
+    help="Vector index name to use (overrides VECTOR_INDEX setting)",
+)
+@click.option(
+    "--vector-namespace",
+    "-n",
+    help="Vector namespace to use (overrides VECTOR_NAMESPACE setting)",
+)
+def chat(
+    system_prompt: Optional[str],
+    provider: Optional[str],
+    vector_store: Optional[str],
+    vector_index: Optional[str],
+    vector_namespace: Optional[str],
+):
     """Start an interactive chat session."""
     try:
         # Load configuration
-        config = Config(vector_store_override=vector_store)
+        config = Config(
+            vector_store_override=vector_store,
+            index_name_override=vector_index,
+            namespace_override=vector_namespace,
+        )
 
         # Initialize OpenAI client for embeddings
         openai_client = AsyncOpenAI(api_key=config.provider.openai_api_key)
@@ -139,18 +162,35 @@ def chat(system_prompt: Optional[str], provider: Optional[str], vector_store: Op
     help="Vector store to use (overrides VECTOR_STORE setting)",
 )
 @click.option(
-    "--ttl-days",
+    "--vector-index",
+    "-i",
+    help="Vector index name to use (overrides VECTOR_INDEX setting)",
+)
+@click.option(
+    "--vector-namespace",
+    "-n",
+    help="Vector namespace to use (overrides VECTOR_NAMESPACE setting)",
+)
+@click.option(
+    "--cache-ttl-days",
     "-t",
     type=int,
     help="Number of days to keep entries (overrides CACHE_TTL_DAYS setting)",
 )
-def cleanup(vector_store: Optional[str], ttl_days: Optional[int]):
+def cleanup(
+    vector_store: Optional[str],
+    vector_index: Optional[str],
+    vector_namespace: Optional[str],
+    cache_ttl_days: Optional[int],
+):
     """Clean up old cache entries."""
     try:
         # Load configuration
         config = Config(
             vector_store_override=vector_store,
-            ttl_days_override=ttl_days
+            ttl_days_override=cache_ttl_days,
+            index_name_override=vector_index,
+            namespace_override=vector_namespace,
         )
 
         # Initialize OpenAI client for embeddings
@@ -176,4 +216,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    

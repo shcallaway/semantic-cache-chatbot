@@ -1,11 +1,12 @@
 """
 Cache manager for coordinating between vector store and LLM providers.
 """
+
 from typing import Optional, Tuple
 
 from openai import AsyncOpenAI
 
-from chatbot.cache.base import BaseVectorStore, CacheEntry
+from chatbot.cache.base import BaseVectorStore
 from chatbot.cache.pinecone_store import PineconeVectorStore
 from chatbot.cache.qdrant_store import QdrantVectorStore
 from chatbot.config import Config, VectorStoreType
@@ -69,14 +70,30 @@ class CacheManager:
 
         Returns:
             Tuple of (response text, whether it was from cache, optional tuple of (matched question, similarity score))
+
+        Raises:
+            ValueError: If the question is empty or only whitespace
         """
+        # Validate input
+        if not question or question.isspace():
+            raise ValueError("Question cannot be empty")
+
+        # Check token limits
+        question_tokens = self.provider.get_token_count(question)
+        if (
+            self.config.provider.max_tokens
+            and question_tokens > self.config.provider.max_tokens
+        ):
+            raise ValueError("Question exceeds maximum token limit")
+
         # Try to find similar questions in cache
         similar_entries = await self.vector_store.find_similar(question)
 
-        # If we found a similar enough question, use its cached answer
+        # If we found a similar enough question above the threshold, use its cached answer
         if similar_entries:
             entry, similarity = similar_entries[0]
-            return entry.answer, True, (entry.question, similarity)
+            if similarity >= self.config.cache.similarity_threshold:
+                return entry.answer, True, (entry.question, similarity)
 
         # Otherwise, generate a new response
         response = await self.provider.generate_response(

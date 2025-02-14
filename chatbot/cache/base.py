@@ -1,6 +1,7 @@
 """
 Abstract base class for vector store implementations.
 """
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
@@ -9,6 +10,7 @@ from typing import List, Optional, Tuple
 @dataclass
 class CacheEntry:
     """Represents a cached question-answer pair."""
+
     question: str
     answer: str
     provider: str

@@ -1,6 +1,7 @@
 """
-Configuration management for the semantic chatbot.
+Configuration management for the semantic cache chatbot.
 """
+
 import os
 from dataclasses import dataclass
 from enum import Enum
@@ -11,6 +12,7 @@ from dotenv import load_dotenv
 
 class VectorStoreType(Enum):
     """Supported vector store types."""
+
     PINECONE = "pinecone"
     QDRANT = "qdrant"
 
@@ -18,6 +20,7 @@ class VectorStoreType(Enum):
 @dataclass
 class CacheConfig:
     """Configuration for the semantic cache."""
+
     vector_store: VectorStoreType
     # Pinecone settings
     pinecone_api_key: Optional[str] = None
@@ -34,6 +37,7 @@ class CacheConfig:
 @dataclass
 class ProviderConfig:
     """Configuration for LLM providers."""
+
     openai_api_key: Optional[str] = None
     anthropic_api_key: Optional[str] = None
     default_provider: str = "openai"
@@ -47,18 +51,24 @@ class Config:
     def __init__(
         self,
         vector_store_override: Optional[str] = None,
-        ttl_days_override: Optional[int] = None
+        ttl_days_override: Optional[int] = None,
+        index_name_override: Optional[str] = None,
+        namespace_override: Optional[str] = None,
     ):
         """Initialize configuration from environment variables.
-        
+
         Args:
             vector_store_override: Optional vector store type to use instead of environment variable
             ttl_days_override: Optional TTL days to use instead of environment variable
+            index_name_override: Optional vector index name to use instead of environment variable
+            namespace_override: Optional vector namespace to use instead of environment variable
         """
         load_dotenv()
 
         # Cache configuration
-        vector_store = vector_store_override or os.getenv("VECTOR_STORE", "pinecone").lower()
+        vector_store = (
+            vector_store_override or os.getenv("VECTOR_STORE", "pinecone").lower()
+        )
         try:
             vector_store_type = VectorStoreType(vector_store)
         except ValueError:
@@ -69,10 +79,14 @@ class Config:
             pinecone_api_key=os.getenv("PINECONE_API_KEY"),
             qdrant_url=os.getenv("QDRANT_URL"),
             qdrant_api_key=os.getenv("QDRANT_API_KEY"),
-            index_name=os.getenv("VECTOR_INDEX_NAME", "chatbot"),
-            namespace=os.getenv("VECTOR_NAMESPACE", "default"),
+            index_name=index_name_override or os.getenv("VECTOR_INDEX", "chatbot"),
+            namespace=namespace_override or os.getenv("VECTOR_NAMESPACE", "default"),
             similarity_threshold=float(os.getenv("SIMILARITY_THRESHOLD", "0.85")),
-            ttl_days=ttl_days_override if ttl_days_override is not None else int(os.getenv("CACHE_TTL_DAYS", "30")),
+            ttl_days=(
+                ttl_days_override
+                if ttl_days_override is not None
+                else int(os.getenv("CACHE_TTL_DAYS", "30"))
+            ),
         )
 
         # Provider configuration
@@ -115,7 +129,9 @@ class Config:
 
         # Ensure at least one provider is configured
         if not self.provider.openai_api_key and not self.provider.anthropic_api_key:
-            raise ValueError("At least one provider (OpenAI or Anthropic) must be configured")
+            raise ValueError(
+                "At least one provider (OpenAI or Anthropic) must be configured"
+            )
 
         # Validate default provider
         if self.provider.default_provider not in ["openai", "anthropic"]:
@@ -129,7 +145,9 @@ class Config:
             self.provider.default_provider == "anthropic"
             and not self.provider.anthropic_api_key
         ):
-            raise ValueError(f"Default provider {self.provider.default_provider} is not configured")
+            raise ValueError(
+                f"Default provider {self.provider.default_provider} is not configured"
+            )
 
         # Validate cache configuration
         if not (0 < self.cache.similarity_threshold <= 1):
