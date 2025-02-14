@@ -54,7 +54,7 @@ class PgVectorStore(BaseVectorStore):
 
             # Create cache table if it doesn't exist
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS semantic_cache (
+                CREATE TABLE IF NOT EXISTS chatbot (
                     id SERIAL PRIMARY KEY,
                     question TEXT NOT NULL,
                     answer TEXT NOT NULL,
@@ -67,8 +67,8 @@ class PgVectorStore(BaseVectorStore):
 
             # Create index for vector similarity search
             cur.execute("""
-                CREATE INDEX IF NOT EXISTS semantic_cache_embedding_idx 
-                ON semantic_cache 
+                CREATE INDEX IF NOT EXISTS chatbot_embedding_idx 
+                ON chatbot 
                 USING ivfflat (embedding vector_cosine_ops)
             """)
 
@@ -107,9 +107,9 @@ class PgVectorStore(BaseVectorStore):
             cur = conn.cursor()
             cur.execute(
                 """
-                INSERT INTO semantic_cache 
+                INSERT INTO chatbot
                 (question, answer, provider, namespace, timestamp, embedding)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s::vector)
                 """,
                 (
                     question,
@@ -158,10 +158,10 @@ class PgVectorStore(BaseVectorStore):
                     provider,
                     timestamp,
                     embedding,
-                    1 - (embedding <=> %s) as similarity
-                FROM semantic_cache
+                    1 - (embedding <=> %s::vector) as similarity
+                FROM chatbot
                 WHERE namespace = %s
-                ORDER BY embedding <=> %s
+                ORDER BY embedding <=> %s::vector
                 LIMIT %s
                 """,
                 (embedding, self.config.namespace, embedding, limit),
@@ -202,7 +202,7 @@ class PgVectorStore(BaseVectorStore):
                 if self.config.ttl_days is None or self.config.ttl_days <= 0:
                     print("No TTL specified - will remove all entries in namespace")
                     cur.execute(
-                        "DELETE FROM semantic_cache WHERE namespace = %s",
+                        "DELETE FROM chatbot WHERE namespace = %s",
                         (self.config.namespace,),
                     )
                 else:
@@ -210,7 +210,7 @@ class PgVectorStore(BaseVectorStore):
                     print(f"Will remove entries older than: {time.ctime(cutoff_time)}")
                     cur.execute(
                         """
-                        DELETE FROM semantic_cache 
+                        DELETE FROM chatbot 
                         WHERE namespace = %s AND timestamp < %s
                         """,
                         (self.config.namespace, cutoff_time),
