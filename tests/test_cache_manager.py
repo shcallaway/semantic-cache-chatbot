@@ -17,7 +17,7 @@ from chatbot.config import Config, CacheConfig, VectorStoreType
 from chatbot.providers.base import LLMProvider
 
 
-@pytest.fixture(params=[VectorStoreType.PINECONE, VectorStoreType.QDRANT])
+@pytest.fixture(params=[VectorStoreType.PINECONE, VectorStoreType.QDRANT, VectorStoreType.PGVECTOR])
 def vector_store_type(request):
     """Parameterized fixture for testing both vector store types."""
     return request.param
@@ -64,6 +64,11 @@ def config(vector_store_type):
     mock_config.cache.pinecone_api_key = "test_pinecone_key"
     mock_config.cache.qdrant_url = "http://test:6333"
     mock_config.cache.qdrant_api_key = "test_qdrant_key"
+    mock_config.cache.postgres_host = "localhost"
+    mock_config.cache.postgres_port = 5432
+    mock_config.cache.postgres_user = "test_user"
+    mock_config.cache.postgres_password = "test_password"
+    mock_config.cache.postgres_db = "test_db"
     mock_config.cache.index_name = "test_index"
     mock_config.cache.namespace = "test_namespace"
     mock_config.cache.similarity_threshold = 0.85
@@ -104,6 +109,7 @@ def cache_manager(config, openai_client, provider, vector_store):
     patches = [
         patch("chatbot.cache.manager.PineconeVectorStore", return_value=vector_store),
         patch("chatbot.cache.manager.QdrantVectorStore", return_value=vector_store),
+        patch("chatbot.cache.manager.PgVectorStore", return_value=vector_store),
     ]
 
     for p in patches:
@@ -139,6 +145,14 @@ def test_create_qdrant_store(config, openai_client):
     with patch("chatbot.cache.manager.QdrantVectorStore") as mock_qdrant:
         CacheManager(config, openai_client, MockProvider("fake_key"))
         mock_qdrant.assert_called_once_with(config.cache, openai_client)
+
+
+def test_create_pgvector_store(config, openai_client):
+    """Test pgvector store is created with correct config."""
+    config.cache.vector_store = VectorStoreType.PGVECTOR
+    with patch("chatbot.cache.manager.PgVectorStore") as mock_pgvector:
+        CacheManager(config, openai_client, MockProvider("fake_key"))
+        mock_pgvector.assert_called_once_with(config.cache, openai_client)
 
 
 @pytest.mark.asyncio
