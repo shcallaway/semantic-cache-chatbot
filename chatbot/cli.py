@@ -200,9 +200,18 @@ def cleanup(
         llm_provider = get_provider(config, None)
         cache_manager = CacheManager(config, openai_client, llm_provider)
 
+        # Show configuration
+        click.echo("Cache cleanup configuration:")
+        click.echo(f"Vector store: {config.cache.vector_store.value}")
+        click.echo(f"Index: {config.cache.index_name}")
+        click.echo(f"Namespace: {config.cache.namespace}")
+        click.echo(f"TTL days: {config.cache.ttl_days if config.cache.ttl_days is not None else 'None (deleting all)'}")
+        click.echo()
+
         # Run cleanup
         removed = asyncio.run(cache_manager.cleanup())
-        click.echo(f"Removed {removed} old cache entries")
+        click.echo()
+        click.secho(f"Removed {removed} old cache entries", fg="green" if removed > 0 else "yellow")
 
     except Exception as e:
         click.secho(f"Error: {str(e)}", fg="red")

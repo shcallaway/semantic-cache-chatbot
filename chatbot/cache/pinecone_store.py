@@ -33,17 +33,11 @@ class PineconeVectorStore(BaseVectorStore):
         # Initialize Pinecone with API key only
         self.pc = Pinecone(api_key=config.pinecone_api_key)
 
-        # List available indexes first
+        # List available indexes and create if needed
         indexes = self.pc.list_indexes()
-        print(
-            f"Available indexes before initialization: {[idx.name for idx in indexes]}"
-        )
-
-        # Check if index exists
         index_exists = any(idx.name == config.index_name for idx in indexes)
 
         if not index_exists:
-            print(f"Creating index: {config.index_name}")
             self.pc.create_index(
                 name=config.index_name,
                 dimension=1536,
@@ -52,11 +46,9 @@ class PineconeVectorStore(BaseVectorStore):
             )
             # Wait for index to be ready
             sleep(10)
-            print("Index created successfully")
 
         # Get index instance
         self.index = self.pc.Index(config.index_name)
-        print("Index connection established")
 
     async def store(
         self,
@@ -202,148 +194,93 @@ class PineconeVectorStore(BaseVectorStore):
             Number of entries removed
         """
         try:
-            # Get initial stats
-            stats = self.index.describe_index_stats()
-            print(f"Initial stats: {stats}")
+            print(f"Starting cleanup for Pinecone index: {self.config.index_name}")
+            print(f"Namespace: {self.config.namespace}")
+            print(f"TTL days: {self.config.ttl_days if self.config.ttl_days is not None else 'None (deleting all)'}")
 
-            # Handle both object and dictionary formats
+            # Get initial count
+            stats = self.index.describe_index_stats()
             if hasattr(stats, "namespaces"):
                 namespaces = stats.namespaces
             elif isinstance(stats, dict) and "namespaces" in stats:
                 namespaces = stats["namespaces"]
             else:
-                print(f"Unable to get namespaces from stats: {stats}")
+                print("Warning: Unable to get namespace statistics")
                 return 0
 
-            print(f"Namespaces: {namespaces}")
-
-            # Get namespace stats
-            if hasattr(namespaces, "get"):
-                namespace_stats = namespaces.get(self.config.namespace, {})
-            elif isinstance(namespaces, dict):
-                namespace_stats = namespaces.get(self.config.namespace, {})
-            else:
-                print(f"Invalid namespaces type: {type(namespaces)}")
-                return 0
-
-            print(f"Namespace stats: {namespace_stats}")
+            namespace_stats = namespaces.get(self.config.namespace, {})
             initial_count = namespace_stats.get("vector_count", 0)
-            print(f"Initial vector count: {initial_count}")
+            print(f"Found {initial_count} entries in namespace")
 
             if initial_count == 0:
-                print("No vectors to clean up")
                 return 0
 
-            try:
-                print(f"TTL days: {self.config.ttl_days}")
-                if self.config.ttl_days is None or self.config.ttl_days <= 0:
-                    print("Attempting full deletion...")
-                    try:
-                        # Try direct namespace deletion first
-                        print(
-                            f"Attempting to delete namespace: {self.config.namespace}"
-                        )
-                        self.index.delete(
-                            namespace=self.config.namespace, delete_all=True
-                        )
-                        print("Namespace deletion successful")
-                        return initial_count
-                    except Exception as e:
-                        print(f"Namespace deletion failed: {e}")
-                        print("Falling back to vector-by-vector deletion...")
-
-                        # Fall back to vector-by-vector deletion
-                        print("Fetching all vectors...")
-                        query_response = self.index.query(
-                            vector=[1.0 / 1536] * 1536,  # Normalized vector
-                            top_k=initial_count,  # Get all vectors
-                            namespace=self.config.namespace,
-                            include_metadata=False,  # Don't need metadata for full deletion
-                        )
-                        print(f"Query response: {query_response}")
-
-                        if not hasattr(query_response, "matches"):
-                            print("No vectors found in query response")
-                            return 0
-
-                        vector_ids = [match.id for match in query_response.matches]
-                        print(f"Found {len(vector_ids)} vectors")
-
-                        if not vector_ids:
-                            print("No vectors to delete")
-                            return 0
-
-                        print(f"Deleting all {len(vector_ids)} vectors...")
-                        try:
-                            # Delete in smaller batches
-                            batch_size = 100
-                            for i in range(0, len(vector_ids), batch_size):
-                                batch = vector_ids[i : i + batch_size]
-                                print(
-                                    f"Deleting batch {i//batch_size + 1} of {(len(vector_ids)-1)//batch_size + 1}..."
-                                )
-                                self.index.delete(
-                                    ids=batch, namespace=self.config.namespace
-                                )
-                            print("All vectors deleted successfully")
-                            return len(vector_ids)
-                        except Exception as e:
-                            print(f"Error during batch deletion: {e}")
-                            raise
-                else:
-                    # Get vectors with timestamp filter
-                    cutoff_time = time.time() - (self.config.ttl_days * 24 * 60 * 60)
-                    print(f"Fetching vectors older than: {cutoff_time}")
-
+            if self.config.ttl_days is None or self.config.ttl_days <= 0:
+                print("No TTL specified - will remove all entries in namespace")
+                try:
+                    # Try direct namespace deletion
+                    self.index.delete(namespace=self.config.namespace, delete_all=True)
+                    print("Deletion complete")
+                    return initial_count
+                except Exception:
+                    # Fall back to batch deletion
+                    print("Falling back to batch deletion...")
                     query_response = self.index.query(
-                        vector=[1.0 / 1536] * 1536,  # Normalized vector
-                        top_k=initial_count,  # Get all vectors
+                        vector=[1.0 / 1536] * 1536,
+                        top_k=initial_count,
                         namespace=self.config.namespace,
-                        include_metadata=True,
+                        include_metadata=False,
                     )
-                    print(f"Query response: {query_response}")
 
                     if not hasattr(query_response, "matches"):
-                        print("No vectors found in query response")
                         return 0
 
-                    old_vector_ids = []
-                    for match in query_response.matches:
-                        if match.metadata and "timestamp" in match.metadata:
-                            if float(match.metadata["timestamp"]) < cutoff_time:
-                                old_vector_ids.append(match.id)
-
-                    if old_vector_ids:
-                        print(f"Deleting {len(old_vector_ids)} old vectors...")
-                        try:
-                            # Delete in smaller batches
-                            batch_size = 100
-                            for i in range(0, len(old_vector_ids), batch_size):
-                                batch = old_vector_ids[i : i + batch_size]
-                                print(
-                                    f"Deleting batch {i//batch_size + 1} of {(len(old_vector_ids)-1)//batch_size + 1}..."
-                                )
-                                self.index.delete(
-                                    ids=batch, namespace=self.config.namespace
-                                )
-                            print("Old vectors deleted successfully")
-                            return len(old_vector_ids)
-                        except Exception as e:
-                            print(f"Error during batch deletion: {e}")
-                            raise
-                    else:
-                        print("No vectors old enough to delete")
+                    vector_ids = [match.id for match in query_response.matches]
+                    if not vector_ids:
                         return 0
 
-            except Exception as e:
-                print(f"Delete operation failed: {str(e)}")
-                print(f"Error type: {type(e)}")
-                if hasattr(e, "response"):
-                    print(
-                        f"Response status: {getattr(e.response, 'status_code', 'N/A')}"
-                    )
-                    print(f"Response body: {getattr(e.response, 'text', 'N/A')}")
-                raise
+                    # Delete in batches
+                    batch_size = 100
+                    for i in range(0, len(vector_ids), batch_size):
+                        batch = vector_ids[i : i + batch_size]
+                        self.index.delete(ids=batch, namespace=self.config.namespace)
+                    print("Deletion complete")
+                    return len(vector_ids)
+            else:
+                # Delete old entries
+                cutoff_time = time.time() - (self.config.ttl_days * 24 * 60 * 60)
+                print(f"Will remove entries older than: {time.ctime(cutoff_time)}")
+
+                query_response = self.index.query(
+                    vector=[1.0 / 1536] * 1536,
+                    top_k=initial_count,
+                    namespace=self.config.namespace,
+                    include_metadata=True,
+                )
+
+                if not hasattr(query_response, "matches"):
+                    return 0
+
+                old_vector_ids = [
+                    match.id
+                    for match in query_response.matches
+                    if match.metadata
+                    and "timestamp" in match.metadata
+                    and float(match.metadata["timestamp"]) < cutoff_time
+                ]
+
+                if not old_vector_ids:
+                    return 0
+
+                print(f"Found {len(old_vector_ids)} entries to remove")
+                
+                # Delete in batches
+                batch_size = 100
+                for i in range(0, len(old_vector_ids), batch_size):
+                    batch = old_vector_ids[i : i + batch_size]
+                    self.index.delete(ids=batch, namespace=self.config.namespace)
+                print("Deletion complete")
+                return len(old_vector_ids)
 
         except Exception as e:
             print(f"Warning: Cache cleanup failed - {str(e)}")

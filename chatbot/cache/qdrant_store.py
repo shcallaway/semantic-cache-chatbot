@@ -148,39 +148,57 @@ class QdrantVectorStore(BaseVectorStore):
             Number of entries removed
         """
         try:
+            print(f"Starting cleanup for Qdrant collection: {self.config.index_name}")
+            print(f"Namespace: {self.config.namespace}")
+            print(f"TTL days: {self.config.ttl_days if self.config.ttl_days is not None else 'None (deleting all)'}")
+
+            # Prepare the filter
             if self.config.ttl_days is None or self.config.ttl_days <= 0:
-                # Delete all entries in namespace
-                result = self.client.delete(
-                    collection_name=self.config.index_name,
-                    points_selector=models.Filter(
-                        must=[
-                            models.FieldCondition(
-                                key="namespace",
-                                match=models.MatchValue(value=self.config.namespace),
-                            ),
-                        ]
-                    ),
+                print("No TTL specified - will remove all entries in namespace")
+                # Filter for all entries in namespace
+                points_filter = models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="namespace",
+                            match=models.MatchValue(value=self.config.namespace),
+                        ),
+                    ]
                 )
             else:
-                # Delete old entries
+                # Filter for old entries
                 cutoff_time = time.time() - (self.config.ttl_days * 24 * 60 * 60)
-                result = self.client.delete(
-                    collection_name=self.config.index_name,
-                    points_selector=models.Filter(
-                        must=[
-                            models.FieldCondition(
-                                key="namespace",
-                                match=models.MatchValue(value=self.config.namespace),
-                            ),
-                            models.FieldCondition(
-                                key="timestamp",
-                                range=models.Range(lt=cutoff_time),
-                            ),
-                        ]
-                    ),
+                print(f"Will remove entries older than: {time.ctime(cutoff_time)}")
+                points_filter = models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="namespace",
+                            match=models.MatchValue(value=self.config.namespace),
+                        ),
+                        models.FieldCondition(
+                            key="timestamp",
+                            range=models.Range(lt=cutoff_time),
+                        ),
+                    ]
                 )
 
-            return result.deleted_count
+            # Count matching points before deletion
+            count_result = self.client.count(
+                collection_name=self.config.index_name,
+                count_filter=points_filter,
+            )
+            points_to_delete = count_result.count
+            print(f"Found {points_to_delete} entries to remove")
+
+            if points_to_delete > 0:
+                # Delete the points
+                print("Deleting entries...")
+                self.client.delete(
+                    collection_name=self.config.index_name,
+                    points_selector=points_filter,
+                )
+                print("Deletion complete")
+
+            return points_to_delete
 
         except Exception as e:
             print(f"Warning: Cache cleanup failed - {str(e)}")
