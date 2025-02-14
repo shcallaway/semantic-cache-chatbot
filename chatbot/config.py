@@ -15,6 +15,7 @@ class VectorStoreType(Enum):
 
     PINECONE = "pinecone"
     QDRANT = "qdrant"
+    PGVECTOR = "pgvector"
 
 
 @dataclass
@@ -27,6 +28,12 @@ class CacheConfig:
     # Qdrant settings
     qdrant_url: Optional[str] = None
     qdrant_api_key: Optional[str] = None
+    # PostgreSQL settings
+    postgres_host: Optional[str] = None
+    postgres_port: Optional[int] = None
+    postgres_user: Optional[str] = None
+    postgres_password: Optional[str] = None
+    postgres_db: Optional[str] = None
     # Common settings
     index_name: str = "chatbot"
     namespace: str = "default"
@@ -79,6 +86,11 @@ class Config:
             pinecone_api_key=os.getenv("PINECONE_API_KEY"),
             qdrant_url=os.getenv("QDRANT_URL"),
             qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+            postgres_host=os.getenv("POSTGRES_HOST"),
+            postgres_port=self._get_optional_int("POSTGRES_PORT"),
+            postgres_user=os.getenv("POSTGRES_USER"),
+            postgres_password=os.getenv("POSTGRES_PASSWORD"),
+            postgres_db=os.getenv("POSTGRES_DB"),
             index_name=index_name_override or os.getenv("VECTOR_INDEX", "chatbot"),
             namespace=namespace_override or os.getenv("VECTOR_NAMESPACE", "default"),
             similarity_threshold=float(os.getenv("SIMILARITY_THRESHOLD", "0.85")),
@@ -126,6 +138,17 @@ class Config:
         elif self.cache.vector_store == VectorStoreType.QDRANT:
             if not self.cache.qdrant_url:
                 raise ValueError("QDRANT_URL is required when using Qdrant")
+        elif self.cache.vector_store == VectorStoreType.PGVECTOR:
+            if not all([
+                self.cache.postgres_host,
+                self.cache.postgres_user,
+                self.cache.postgres_password,
+                self.cache.postgres_db
+            ]):
+                raise ValueError(
+                    "PostgreSQL connection settings (POSTGRES_HOST, POSTGRES_USER, "
+                    "POSTGRES_PASSWORD, POSTGRES_DB) are required when using pgvector"
+                )
 
         # Ensure at least one provider is configured
         if not self.provider.openai_api_key and not self.provider.anthropic_api_key:

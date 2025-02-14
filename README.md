@@ -5,7 +5,7 @@ A Python-based terminal chatbot that supports multiple LLM providers (OpenAI and
 ## Features
 
 - Support for multiple LLM providers (OpenAI, Anthropic)
-- Semantic caching using vector embeddings (Pinecone or Qdrant)
+- Semantic caching using vector embeddings (Pinecone, Qdrant, or pgvector)
 - Efficient response retrieval for similar questions
 - Interactive terminal interface
 - Conversation history support
@@ -98,6 +98,61 @@ Note: The tests use mocking extensively, so no API keys or vector store setup is
    - Use Qdrant Cloud at [cloud.qdrant.io](https://cloud.qdrant.io)
 2. If using Qdrant Cloud, copy your API key from the dashboard
 
+#### Option 3: pgvector
+
+1. Install PostgreSQL if not already installed:
+
+   ```bash
+   # For macOS using Homebrew
+   brew install postgresql@15
+
+   # For Ubuntu/Debian
+   sudo apt-get update
+   sudo apt-get install postgresql-15
+   ```
+
+2. Install the pgvector extension:
+
+   ```bash
+   # For macOS using Homebrew
+   brew install pgvector
+
+   # For Ubuntu/Debian
+   sudo apt-get install postgresql-15-pgvector
+   ```
+
+3. Create a database and enable the pgvector extension:
+
+   ```bash
+   # Create database
+   createdb chatbot
+
+   # Connect to the database
+   psql chatbot
+
+   # Enable pgvector extension
+   CREATE EXTENSION vector;
+
+   # Exit psql
+   \q
+   ```
+
+4. Create a database user (if not using an existing one):
+
+   ```bash
+   # Connect to PostgreSQL
+   psql
+
+   # Create user with password
+   CREATE USER chatbot WITH PASSWORD 'password';
+
+   # Grant privileges
+   GRANT ALL PRIVILEGES ON DATABASE chatbot TO chatbot;
+
+   # Exit psql
+   \q
+   ```
+
 ### 5. Environment Configuration
 
 Create a `.env` file in the project root directory with the following settings:
@@ -108,7 +163,7 @@ OPENAI_API_KEY=your_api_key_here
 ANTHROPIC_API_KEY=your_api_key_here
 
 # Vector Store Configuration
-VECTOR_STORE=pinecone # Or "qdrant"
+VECTOR_STORE=pinecone # Or "qdrant" or "pgvector"
 
 # Pinecone Configuration (when using Pinecone)
 PINECONE_API_KEY=your_api_key_here
@@ -116,6 +171,13 @@ PINECONE_API_KEY=your_api_key_here
 # Qdrant Configuration (when using Qdrant)
 QDRANT_URL=http://localhost:6333 # Or your Qdrant Cloud URL
 QDRANT_API_KEY=your_api_key_here # Optional, required for Qdrant Cloud
+
+# PostgreSQL Configuration (when using pgvector)
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432 # Optional, defaults to 5432
+POSTGRES_USER=chatbot
+POSTGRES_PASSWORD=password
+POSTGRES_DB=chatbot
 
 # Vector Store Settings
 VECTOR_INDEX_NAME=chatbot
@@ -244,6 +306,27 @@ deactivate
    - Verify your API key in the `.env` file
    - Check that your cluster is in the "Active" state
    - Ensure your firewall isn't blocking the connection
+
+#### pgvector Issues
+
+1. If the pgvector extension is not available:
+
+- Verify PostgreSQL version is 11 or higher
+- Check that pgvector is installed correctly for your OS
+- Try reinstalling the extension: `DROP EXTENSION vector; CREATE EXTENSION vector;`
+
+2. For connection issues:
+
+- Verify PostgreSQL is running: `pg_isready`
+- Check connection settings in `.env` file
+- Ensure the database user has proper permissions
+- Try connecting manually: `psql -U chatbot -d chatbot`
+
+3. For performance issues:
+
+- Verify the vector index is created properly
+- Check PostgreSQL logs for any errors
+- Consider adjusting PostgreSQL configuration for better vector search performance
 
 ## License
 

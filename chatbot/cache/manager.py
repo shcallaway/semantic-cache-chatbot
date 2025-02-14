@@ -8,6 +8,7 @@ from openai import AsyncOpenAI
 
 from chatbot.cache.base import BaseVectorStore
 from chatbot.cache.pinecone_store import PineconeVectorStore
+from chatbot.cache.pgvector_store import PgVectorStore
 from chatbot.cache.qdrant_store import QdrantVectorStore
 from chatbot.config import Config, VectorStoreType
 from chatbot.providers.base import LLMProvider
@@ -54,6 +55,8 @@ class CacheManager:
             return PineconeVectorStore(config.cache, openai_client)
         elif config.cache.vector_store == VectorStoreType.QDRANT:
             return QdrantVectorStore(config.cache, openai_client)
+        elif config.cache.vector_store == VectorStoreType.PGVECTOR:
+            return PgVectorStore(config.cache, openai_client)
         else:
             raise ValueError(f"Invalid vector store type: {config.cache.vector_store}")
 
