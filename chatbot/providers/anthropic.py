@@ -4,7 +4,7 @@ Anthropic provider implementation using Claude.
 from typing import Optional
 
 import anthropic
-from anthropic import Anthropic
+from anthropic import AsyncAnthropic
 
 from chatbot.providers.base import LLMProvider
 
@@ -20,8 +20,8 @@ class AnthropicProvider(LLMProvider):
             **kwargs: Additional configuration options
         """
         super().__init__(api_key, **kwargs)
-        self.client = Anthropic(api_key=api_key)
-        self._model = kwargs.get("model", "claude-3-opus-20240229")
+        self.client = AsyncAnthropic(api_key=api_key)
+        self._model = kwargs.get("model", "claude-3-opus-20240229")  # or claude-3-sonnet-20240229 for a smaller model
         self._system_prompt = kwargs.get(
             "system_prompt",
             "You are Claude, a helpful AI assistant. Provide clear, accurate, and concise responses.",
@@ -53,7 +53,7 @@ class AnthropicProvider(LLMProvider):
         Returns:
             The generated response text
         """
-        message = await self.client.messages.create(
+        response = await self.client.messages.create(
             model=self._model,
             max_tokens=max_tokens,
             temperature=temperature,
@@ -65,7 +65,7 @@ class AnthropicProvider(LLMProvider):
                 }
             ],
         )
-        return message.content[0].text
+        return response.content[0].text
 
     def get_token_count(self, text: str) -> int:
         """Get the approximate number of tokens in the text.
@@ -91,7 +91,7 @@ class AnthropicProvider(LLMProvider):
         """
         config = super().default_config
         config.update({
-            "model": "claude-3-opus-20240229",
+            "model": "claude-3-opus-20240229",  # or claude-3-sonnet-20240229 for a smaller model
             "max_tokens": 1024,
         })
         return config
