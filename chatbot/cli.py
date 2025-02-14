@@ -116,7 +116,7 @@ def cli():
 @click.option(
     "--vector-store",
     "-v",
-    type=click.Choice(["pinecone", "qdrant"]),
+    type=click.Choice(["pinecone", "qdrant", "pgvector"]),
     help="Vector store to use (overrides VECTOR_STORE setting)",
 )
 @click.option(
@@ -164,7 +164,7 @@ def chat(
 @click.option(
     "--vector-store",
     "-v",
-    type=click.Choice(["pinecone", "qdrant"]),
+    type=click.Choice(["pinecone", "qdrant", "pgvector"]),
     help="Vector store to use (overrides VECTOR_STORE setting)",
 )
 @click.option(
