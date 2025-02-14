@@ -55,7 +55,7 @@ class BaseVectorStore(ABC):
         pass
 
     @abstractmethod
-    def cleanup_old_entries(self) -> int:
+    async def cleanup_old_entries(self) -> int:
         """Remove entries older than the TTL.
 
         Returns:

@@ -22,7 +22,7 @@ def vector_store():
     mock = MagicMock()
     mock.find_similar = AsyncMock()
     mock.store = AsyncMock()
-    mock.cleanup_old_entries = MagicMock()
+    mock.cleanup_old_entries = AsyncMock()
     return mock
 
 
@@ -185,7 +185,7 @@ async def test_cleanup(cache_manager):
     """Test cache cleanup."""
     # Mock cleanup to return number of entries removed
     expected_removed = 5
-    cache_manager.vector_store.cleanup_old_entries = MagicMock(return_value=expected_removed)
+    cache_manager.vector_store.cleanup_old_entries.return_value = expected_removed
 
     # Run cleanup
     removed = await cache_manager.cleanup()

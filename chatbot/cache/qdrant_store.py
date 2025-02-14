@@ -140,29 +140,47 @@ class QdrantVectorStore(BaseVectorStore):
 
         return entries
 
-    def cleanup_old_entries(self) -> int:
+    async def cleanup_old_entries(self) -> int:
         """Remove entries older than the TTL.
 
         Returns:
             Number of entries removed
         """
-        cutoff_time = time.time() - (self.config.ttl_days * 24 * 60 * 60)
-        
-        # Delete old vectors
-        result = self.client.delete(
-            collection_name=self.config.index_name,
-            points_selector=models.Filter(
-                must=[
-                    models.FieldCondition(
-                        key="namespace",
-                        match=models.MatchValue(value=self.config.namespace),
+        try:
+            if self.config.ttl_days is None or self.config.ttl_days <= 0:
+                # Delete all entries in namespace
+                result = self.client.delete(
+                    collection_name=self.config.index_name,
+                    points_selector=models.Filter(
+                        must=[
+                            models.FieldCondition(
+                                key="namespace",
+                                match=models.MatchValue(value=self.config.namespace),
+                            ),
+                        ]
                     ),
-                    models.FieldCondition(
-                        key="timestamp",
-                        range=models.Range(lt=cutoff_time),
+                )
+            else:
+                # Delete old entries
+                cutoff_time = time.time() - (self.config.ttl_days * 24 * 60 * 60)
+                result = self.client.delete(
+                    collection_name=self.config.index_name,
+                    points_selector=models.Filter(
+                        must=[
+                            models.FieldCondition(
+                                key="namespace",
+                                match=models.MatchValue(value=self.config.namespace),
+                            ),
+                            models.FieldCondition(
+                                key="timestamp",
+                                range=models.Range(lt=cutoff_time),
+                            ),
+                        ]
                     ),
-                ]
-            ),
-        )
-        
-        return result.deleted_count
+                )
+            
+            return result.deleted_count
+            
+        except Exception as e:
+            print(f"Warning: Cache cleanup failed - {str(e)}")
+            return 0

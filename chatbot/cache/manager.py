@@ -101,4 +101,4 @@ class CacheManager:
         Returns:
             Number of entries removed
         """
-        return self.vector_store.cleanup_old_entries()
+        return await self.vector_store.cleanup_old_entries()

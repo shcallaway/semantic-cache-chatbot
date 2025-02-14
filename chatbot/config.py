@@ -72,7 +72,7 @@ class Config:
             index_name=os.getenv("VECTOR_INDEX_NAME", "chatbot"),
             namespace=os.getenv("VECTOR_NAMESPACE", "default"),
             similarity_threshold=float(os.getenv("SIMILARITY_THRESHOLD", "0.85")),
-            ttl_days=ttl_days_override or int(os.getenv("CACHE_TTL_DAYS", "30")),
+            ttl_days=ttl_days_override if ttl_days_override is not None else int(os.getenv("CACHE_TTL_DAYS", "30")),
         )
 
         # Provider configuration
@@ -134,5 +134,5 @@ class Config:
         # Validate cache configuration
         if not (0 < self.cache.similarity_threshold <= 1):
             raise ValueError("SIMILARITY_THRESHOLD must be between 0 and 1")
-        if self.cache.ttl_days <= 0:
-            raise ValueError("CACHE_TTL_DAYS must be positive")
+        if self.cache.ttl_days < 0:
+            raise ValueError("CACHE_TTL_DAYS must be non-negative")
