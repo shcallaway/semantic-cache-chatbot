@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 class CacheConfig:
     """Configuration for the semantic cache."""
     pinecone_api_key: str
-    pinecone_environment: str
     index_name: str = "chatbot"
     namespace: str = "default"
     similarity_threshold: float = 0.85
@@ -39,7 +38,6 @@ class Config:
         # Cache configuration
         self.cache = CacheConfig(
             pinecone_api_key=self._get_required_env("PINECONE_API_KEY"),
-            pinecone_environment=self._get_required_env("PINECONE_ENVIRONMENT"),
             index_name=os.getenv("PINECONE_INDEX_NAME", "chatbot"),
             namespace=os.getenv("PINECONE_NAMESPACE", "default"),
             similarity_threshold=float(os.getenv("SIMILARITY_THRESHOLD", "0.85")),

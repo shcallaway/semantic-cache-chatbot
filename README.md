@@ -16,13 +16,29 @@ A Python-based terminal chatbot that supports multiple LLM providers (OpenAI and
 
 Before starting, ensure you have:
 
-- Python 3.7 or higher installed
+- Python 3.9 or higher installed (tested with Python 3.9.6)
 - A Pinecone account (free tier available at [pinecone.io](https://www.pinecone.io))
 - OpenAI API key and/or Anthropic API key
 
-### 2. Virtual Environment Setup
+### 2. Development Setup
 
-Create and activate a virtual environment:
+The easiest way to set up the development environment is using the provided setup script:
+
+```bash
+# Make the setup script executable
+chmod +x setup_dev.sh
+
+# Run the setup script
+./setup_dev.sh
+```
+
+This will:
+
+- Create a Python virtual environment
+- Install all dependencies including development tools
+- Create a .env file from the example template
+
+Alternatively, you can set up manually:
 
 ```bash
 # Create virtual environment
@@ -30,19 +46,34 @@ python3 -m venv venv
 
 # Activate virtual environment
 source venv/bin/activate
+
+# Upgrade pip to latest version
+python -m pip install --upgrade pip
+
+# Install dependencies and development tools
+python -m pip install -r requirements.txt pytest-asyncio
+python -m pip install -e .
 ```
 
-### 3. Install Dependencies
+### 3. Running Tests
 
-With the virtual environment activated, install the required packages:
+The project uses pytest with async support for testing. To run the tests:
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Activate virtual environment if not already active
+source venv/bin/activate
 
-# For development (includes testing tools):
-pip install -e ".[dev]"
+# Run tests with verbose output
+python -m pytest tests/ -v
+
+# Run tests with more detailed output
+python -m pytest tests/ -vv
+
+# Run a specific test file
+python -m pytest tests/test_cache_manager.py -v
 ```
+
+Note: The tests use mocking extensively, so no API keys or Pinecone setup is required to run them.
 
 ### 4. Pinecone Setup
 
@@ -53,7 +84,7 @@ pip install -e ".[dev]"
    - Dimensions: 1536 (for OpenAI embeddings)
    - Metric: Cosine
    - Pod Type: Starter (free tier)
-4. Copy your API key and environment from the Pinecone console
+4. Copy your API key from the Pinecone console
 
 ### 5. Environment Configuration
 
@@ -61,19 +92,18 @@ Create a `.env` file in the project root directory with the following settings:
 
 ```env
 # LLM Provider API Keys
-OPENAI_API_KEY=your_openai_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
+OPENAI_API_KEY=<YOUR API KEY HERE>
+ANTHROPIC_API_KEY=<YOUR API KEY HERE>
 
 # Pinecone Configuration
-PINECONE_API_KEY=your_pinecone_api_key_here
-PINECONE_ENVIRONMENT=your_pinecone_environment_here
+PINECONE_API_KEY=<YOUR API KEY HERE>
 PINECONE_INDEX_NAME=chatbot
 PINECONE_NAMESPACE=default
 
 # Provider Settings
-DEFAULT_PROVIDER=openai  # or anthropic
+DEFAULT_PROVIDER=openai # Or, "anthropic"
 TEMPERATURE=0.7
-MAX_TOKENS=1024  # optional
+MAX_TOKENS=1024 # Optional
 
 # Cache Settings
 SIMILARITY_THRESHOLD=0.85
@@ -96,11 +126,22 @@ python -m chatbot.cli
 
 ## Development
 
-Run tests:
+### Running Tests
+
+The project uses pytest with async support for testing:
 
 ```bash
-pytest tests/
+# Run tests with verbose output
+python -m pytest tests/ -v
+
+# Run tests with more detailed output
+python -m pytest tests/ -vv
+
+# Run a specific test file
+python -m pytest tests/test_cache_manager.py -v
 ```
+
+Note: The tests use mocking extensively, so no API keys or Pinecone setup is required to run them.
 
 ## Exiting
 
@@ -113,10 +154,44 @@ deactivate
 
 ## Troubleshooting
 
+### Environment Setup Issues
+
 1. If you see "command not found: python", try using `python3` instead
-2. Ensure your Pinecone index is created with the correct dimensions (1536)
-3. Verify all API keys in your `.env` file are correct
-4. Check that your Pinecone index is in the "Ready" state in the Pinecone console
+2. For virtual environment issues:
+   ```bash
+   # If venv exists but seems corrupted
+   rm -rf venv
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+3. If you get pip-related errors:
+   ```bash
+   # Upgrade pip to the latest version
+   python -m pip install --upgrade pip
+   ```
+
+### Testing Issues
+
+1. If tests fail with missing pytest-asyncio:
+   ```bash
+   python -m pip install pytest-asyncio
+   ```
+2. If you get SSL-related warnings with urllib3:
+   - This is a known issue with LibreSSL on some systems
+   - The warnings can be safely ignored for development
+3. For test failures:
+   - Run tests with -vv flag for detailed output: `python -m pytest tests/ -vv`
+   - Ensure you're using Python 3.9 or higher
+   - Make sure all test dependencies are installed
+
+### Pinecone Issues
+
+1. Ensure your Pinecone index is created with the correct dimensions (1536)
+2. Verify your API key in the `.env` file is correct
+3. Check that your Pinecone index is in the "Ready" state in the console
+4. If index creation fails:
+   - Verify you have selected the Starter (free) tier
+   - Check that you haven't exceeded the free tier limits
 
 ## License
 

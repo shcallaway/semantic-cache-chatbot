@@ -5,8 +5,8 @@ import time
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
-import pinecone
 from openai import AsyncOpenAI
+from pinecone import Pinecone
 
 from chatbot.config import CacheConfig
 
@@ -39,20 +39,17 @@ class VectorStore:
         self.openai_client = openai_client
         
         # Initialize Pinecone
-        pinecone.init(
-            api_key=config.pinecone_api_key,
-            environment=config.pinecone_environment,
-        )
+        self.pc = Pinecone(api_key=config.pinecone_api_key)
         
         # Create index if it doesn't exist
-        if config.index_name not in pinecone.list_indexes():
-            pinecone.create_index(
+        if config.index_name not in [index.name for index in self.pc.list_indexes()]:
+            self.pc.create_index(
                 name=config.index_name,
                 dimension=1536,  # OpenAI embedding dimension
                 metric="cosine",
             )
         
-        self.index = pinecone.Index(config.index_name)
+        self.index = self.pc.Index(config.index_name)
 
     async def store(
         self,
@@ -129,20 +126,21 @@ class VectorStore:
             top_k=limit,
             namespace=self.config.namespace,
             include_metadata=True,
+            include_values=True,
         )
 
         # Convert results to cache entries
         entries = []
-        for match in results.matches:
-            if match.score >= self.config.similarity_threshold:
+        for match in results['matches']:
+            if match['score'] >= self.config.similarity_threshold:
                 entry = CacheEntry(
-                    question=match.metadata["question"],
-                    answer=match.metadata["answer"],
-                    provider=match.metadata["provider"],
-                    timestamp=match.metadata["timestamp"],
-                    embedding=match.values,
+                    question=match['metadata']["question"],
+                    answer=match['metadata']["answer"],
+                    provider=match['metadata']["provider"],
+                    timestamp=match['metadata']["timestamp"],
+                    embedding=match['values'],
                 )
-                entries.append((entry, match.score))
+                entries.append((entry, match['score']))
 
         return entries
 
@@ -162,4 +160,5 @@ class VectorStore:
             namespace=self.config.namespace,
         )
         
-        return delete_response.deleted_count if hasattr(delete_response, 'deleted_count') else 0
+        # In v3, delete response is a dict with 'deleted_count' key
+        return delete_response.get('deleted_count', 0)
