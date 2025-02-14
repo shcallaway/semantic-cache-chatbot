@@ -85,7 +85,7 @@ class PineconeVectorStore(BaseVectorStore):
         self.index.upsert(
             vectors=[
                 {
-                    "id": str(hash(question)),
+                    "id": str(abs(hash(question.strip().lower()))),
                     "values": embedding,
                     "metadata": {
                         "question": question,
