@@ -5,8 +5,10 @@ from typing import Optional, Tuple
 
 from openai import AsyncOpenAI
 
-from chatbot.cache.vector_store import CacheEntry, VectorStore
-from chatbot.config import Config
+from chatbot.cache.base import BaseVectorStore, CacheEntry
+from chatbot.cache.pinecone_store import PineconeVectorStore
+from chatbot.cache.qdrant_store import QdrantVectorStore
+from chatbot.config import Config, VectorStoreType
 from chatbot.providers.base import LLMProvider
 
 
@@ -27,8 +29,32 @@ class CacheManager:
             provider: LLM provider instance
         """
         self.config = config
-        self.vector_store = VectorStore(config.cache, openai_client)
+        self.vector_store = self._create_vector_store(config, openai_client)
         self.provider = provider
+
+    def _create_vector_store(
+        self,
+        config: Config,
+        openai_client: AsyncOpenAI,
+    ) -> BaseVectorStore:
+        """Create the appropriate vector store implementation.
+
+        Args:
+            config: Application configuration
+            openai_client: OpenAI client for embeddings
+
+        Returns:
+            Vector store implementation
+
+        Raises:
+            ValueError: If the vector store type is invalid
+        """
+        if config.cache.vector_store == VectorStoreType.PINECONE:
+            return PineconeVectorStore(config.cache, openai_client)
+        elif config.cache.vector_store == VectorStoreType.QDRANT:
+            return QdrantVectorStore(config.cache, openai_client)
+        else:
+            raise ValueError(f"Invalid vector store type: {config.cache.vector_store}")
 
     async def get_response(
         self,
@@ -61,7 +87,6 @@ class CacheManager:
         )
 
         # Cache the new question-answer pair
-        # We can pass the embedding from the similarity search to avoid recomputing
         await self.vector_store.store(
             question=question,
             answer=response,

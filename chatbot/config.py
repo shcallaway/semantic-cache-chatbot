@@ -3,15 +3,28 @@ Configuration management for the semantic chatbot.
 """
 import os
 from dataclasses import dataclass
+from enum import Enum
 from typing import Optional
 
 from dotenv import load_dotenv
 
 
+class VectorStoreType(Enum):
+    """Supported vector store types."""
+    PINECONE = "pinecone"
+    QDRANT = "qdrant"
+
+
 @dataclass
 class CacheConfig:
     """Configuration for the semantic cache."""
-    pinecone_api_key: str
+    vector_store: VectorStoreType
+    # Pinecone settings
+    pinecone_api_key: Optional[str] = None
+    # Qdrant settings
+    qdrant_url: Optional[str] = None
+    qdrant_api_key: Optional[str] = None
+    # Common settings
     index_name: str = "chatbot"
     namespace: str = "default"
     similarity_threshold: float = 0.85
@@ -36,10 +49,19 @@ class Config:
         load_dotenv()
 
         # Cache configuration
+        vector_store = os.getenv("VECTOR_STORE", "pinecone").lower()
+        try:
+            vector_store_type = VectorStoreType(vector_store)
+        except ValueError:
+            raise ValueError(f"Invalid vector store type: {vector_store}")
+
         self.cache = CacheConfig(
-            pinecone_api_key=self._get_required_env("PINECONE_API_KEY"),
-            index_name=os.getenv("PINECONE_INDEX_NAME", "chatbot"),
-            namespace=os.getenv("PINECONE_NAMESPACE", "default"),
+            vector_store=vector_store_type,
+            pinecone_api_key=os.getenv("PINECONE_API_KEY"),
+            qdrant_url=os.getenv("QDRANT_URL"),
+            qdrant_api_key=os.getenv("QDRANT_API_KEY"),
+            index_name=os.getenv("VECTOR_INDEX_NAME", "chatbot"),
+            namespace=os.getenv("VECTOR_NAMESPACE", "default"),
             similarity_threshold=float(os.getenv("SIMILARITY_THRESHOLD", "0.85")),
             ttl_days=int(os.getenv("CACHE_TTL_DAYS", "30")),
         )
@@ -54,24 +76,6 @@ class Config:
         )
 
         self._validate_config()
-
-    @staticmethod
-    def _get_required_env(key: str) -> str:
-        """Get a required environment variable.
-
-        Args:
-            key: Environment variable name
-
-        Returns:
-            The environment variable value
-
-        Raises:
-            ValueError: If the environment variable is not set
-        """
-        value = os.getenv(key)
-        if not value:
-            raise ValueError(f"Required environment variable {key} is not set")
-        return value
 
     @staticmethod
     def _get_optional_int(key: str) -> Optional[int]:
@@ -92,6 +96,14 @@ class Config:
         Raises:
             ValueError: If the configuration is invalid
         """
+        # Validate vector store configuration
+        if self.cache.vector_store == VectorStoreType.PINECONE:
+            if not self.cache.pinecone_api_key:
+                raise ValueError("PINECONE_API_KEY is required when using Pinecone")
+        elif self.cache.vector_store == VectorStoreType.QDRANT:
+            if not self.cache.qdrant_url:
+                raise ValueError("QDRANT_URL is required when using Qdrant")
+
         # Ensure at least one provider is configured
         if not self.provider.openai_api_key and not self.provider.anthropic_api_key:
             raise ValueError("At least one provider (OpenAI or Anthropic) must be configured")

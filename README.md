@@ -5,7 +5,7 @@ A Python-based terminal chatbot that supports multiple LLM providers (OpenAI and
 ## Features
 
 - Support for multiple LLM providers (OpenAI, Anthropic)
-- Semantic caching using vector embeddings and Pinecone
+- Semantic caching using vector embeddings (Pinecone or Qdrant)
 - Efficient response retrieval for similar questions
 - Interactive terminal interface
 - Conversation history support
@@ -17,7 +17,7 @@ A Python-based terminal chatbot that supports multiple LLM providers (OpenAI and
 Before starting, ensure you have:
 
 - Python 3.9 or higher installed (tested with Python 3.9.6)
-- A Pinecone account (free tier available at [pinecone.io](https://www.pinecone.io))
+- A Pinecone account (free tier available at [pinecone.io](https://www.pinecone.io)) or Qdrant instance
 - OpenAI API key and/or Anthropic API key
 
 ### 2. Development Setup
@@ -73,9 +73,11 @@ python -m pytest tests/ -vv
 python -m pytest tests/test_cache_manager.py -v
 ```
 
-Note: The tests use mocking extensively, so no API keys or Pinecone setup is required to run them.
+Note: The tests use mocking extensively, so no API keys or vector store setup is required to run them.
 
-### 4. Pinecone Setup
+### 4. Vector Store Setup
+
+#### Option 1: Pinecone
 
 1. Create a Pinecone account at [pinecone.io](https://www.pinecone.io)
 2. Create a new project in Pinecone
@@ -86,22 +88,41 @@ Note: The tests use mocking extensively, so no API keys or Pinecone setup is req
    - Pod Type: Starter (free tier)
 4. Copy your API key from the Pinecone console
 
+#### Option 2: Qdrant
+
+1. You can either:
+   - Run Qdrant locally using Docker:
+     ```bash
+     docker run -p 6333:6333 qdrant/qdrant
+     ```
+   - Use Qdrant Cloud at [cloud.qdrant.io](https://cloud.qdrant.io)
+2. If using Qdrant Cloud, copy your API key from the dashboard
+
 ### 5. Environment Configuration
 
 Create a `.env` file in the project root directory with the following settings:
 
 ```env
 # LLM Provider API Keys
-OPENAI_API_KEY=<YOUR API KEY HERE>
-ANTHROPIC_API_KEY=<YOUR API KEY HERE>
+OPENAI_API_KEY=your_api_key_here
+ANTHROPIC_API_KEY=your_api_key_here
 
-# Pinecone Configuration
-PINECONE_API_KEY=<YOUR API KEY HERE>
-PINECONE_INDEX_NAME=chatbot
-PINECONE_NAMESPACE=default
+# Vector Store Configuration
+VECTOR_STORE=pinecone # Or "qdrant"
+
+# Pinecone Configuration (when using Pinecone)
+PINECONE_API_KEY=your_api_key_here
+
+# Qdrant Configuration (when using Qdrant)
+QDRANT_URL=http://localhost:6333 # Or your Qdrant Cloud URL
+QDRANT_API_KEY=your_api_key_here # Optional, required for Qdrant Cloud
+
+# Vector Store Settings
+VECTOR_INDEX_NAME=chatbot
+VECTOR_NAMESPACE=default
 
 # Provider Settings
-DEFAULT_PROVIDER=openai # Or, "anthropic"
+DEFAULT_PROVIDER=openai # Or "anthropic"
 TEMPERATURE=0.7
 MAX_TOKENS=1024 # Optional
 
@@ -141,7 +162,7 @@ python -m pytest tests/ -vv
 python -m pytest tests/test_cache_manager.py -v
 ```
 
-Note: The tests use mocking extensively, so no API keys or Pinecone setup is required to run them.
+Note: The tests use mocking extensively, so no API keys or vector store setup is required to run them.
 
 ## Exiting
 
@@ -184,7 +205,9 @@ deactivate
    - Ensure you're using Python 3.9 or higher
    - Make sure all test dependencies are installed
 
-### Pinecone Issues
+### Vector Store Issues
+
+#### Pinecone Issues
 
 1. Ensure your Pinecone index is created with the correct dimensions (1536)
 2. Verify your API key in the `.env` file is correct
@@ -192,6 +215,17 @@ deactivate
 4. If index creation fails:
    - Verify you have selected the Starter (free) tier
    - Check that you haven't exceeded the free tier limits
+
+#### Qdrant Issues
+
+1. If using local Qdrant:
+   - Ensure Docker is running
+   - Check that port 6333 is available
+   - Verify the container is running with `docker ps`
+2. If using Qdrant Cloud:
+   - Verify your API key in the `.env` file
+   - Check that your cluster is in the "Active" state
+   - Ensure your firewall isn't blocking the connection
 
 ## License
 

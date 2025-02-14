@@ -4,21 +4,26 @@ Tests for the cache manager.
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from chatbot.cache.base import CacheEntry
 from chatbot.cache.manager import CacheManager
-from chatbot.cache.vector_store import CacheEntry, VectorStore
-from chatbot.config import Config, CacheConfig, ProviderConfig
+from chatbot.config import Config, CacheConfig, ProviderConfig, VectorStoreType
 from chatbot.providers.base import LLMProvider
+
+
+@pytest.fixture(params=[VectorStoreType.PINECONE, VectorStoreType.QDRANT])
+def vector_store_type(request):
+    """Parameterized fixture for testing both vector store types."""
+    return request.param
 
 
 @pytest.fixture
 def vector_store():
     """Create a mock vector store."""
-    with patch('chatbot.cache.manager.VectorStore', autospec=True) as mock:
-        instance = mock.return_value
-        instance.find_similar = AsyncMock()
-        instance.store = AsyncMock()
-        instance.cleanup_old_entries = MagicMock()
-        yield instance
+    mock = MagicMock()
+    mock.find_similar = AsyncMock()
+    mock.store = AsyncMock()
+    mock.cleanup_old_entries = MagicMock()
+    return mock
 
 
 class MockProvider(LLMProvider):
@@ -40,13 +45,16 @@ class MockProvider(LLMProvider):
 
 
 @pytest.fixture
-def config():
+def config(vector_store_type):
     """Create a test configuration."""
     mock_config = MagicMock(spec=Config)
     
     # Mock cache config
     mock_config.cache = MagicMock(spec=CacheConfig)
-    mock_config.cache.pinecone_api_key = "test_api_key"
+    mock_config.cache.vector_store = vector_store_type
+    mock_config.cache.pinecone_api_key = "test_pinecone_key"
+    mock_config.cache.qdrant_url = "http://test:6333"
+    mock_config.cache.qdrant_api_key = "test_qdrant_key"
     mock_config.cache.index_name = "test_index"
     mock_config.cache.namespace = "test_namespace"
     mock_config.cache.similarity_threshold = 0.85
@@ -77,9 +85,22 @@ def provider():
 @pytest.fixture
 def cache_manager(config, openai_client, provider, vector_store):
     """Create a CacheManager instance with mocked dependencies."""
-    with patch('chatbot.cache.manager.VectorStore', return_value=vector_store):
-        manager = CacheManager(config, openai_client, provider)
-        return manager
+    # Patch both vector store implementations at the module level
+    patches = [
+        patch('chatbot.cache.manager.PineconeVectorStore', return_value=vector_store),
+        patch('chatbot.cache.manager.QdrantVectorStore', return_value=vector_store)
+    ]
+    
+    for p in patches:
+        p.start()
+    
+    manager = CacheManager(config, openai_client, provider)
+    
+    # Stop all patches after creating the manager
+    for p in patches:
+        p.stop()
+    
+    return manager
 
 
 @pytest.mark.asyncio

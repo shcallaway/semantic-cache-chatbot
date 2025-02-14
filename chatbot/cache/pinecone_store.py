@@ -2,26 +2,16 @@
 Vector store implementation using Pinecone.
 """
 import time
-from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from openai import AsyncOpenAI
 from pinecone import Pinecone
 
+from chatbot.cache.base import BaseVectorStore, CacheEntry
 from chatbot.config import CacheConfig
 
 
-@dataclass
-class CacheEntry:
-    """Represents a cached question-answer pair."""
-    question: str
-    answer: str
-    provider: str
-    timestamp: float
-    embedding: List[float]
-
-
-class VectorStore:
+class PineconeVectorStore(BaseVectorStore):
     """Vector store implementation using Pinecone."""
 
     def __init__(
