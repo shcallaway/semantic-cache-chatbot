@@ -77,7 +77,7 @@ class QdrantVectorStore(BaseVectorStore):
             collection_name=self.config.index_name,
             points=[
                 models.PointStruct(
-                    id=hash(question),
+                    id=abs(hash(question)) % (2**63),  # Convert to positive integer within safe range
                     vector=embedding,
                     payload={
                         "question": question,

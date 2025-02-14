@@ -56,13 +56,19 @@ async def chat_loop(
     click.echo()
 
     while True:
-        # Get user input
-        question = click.prompt("You", prompt_suffix="> ", type=str)
-
-        if question.lower() in ["exit", "quit"]:
-            break
-
         try:
+            # Get user input
+            try:
+                question = click.prompt("You", prompt_suffix="> ", type=str)
+            except (KeyboardInterrupt, click.exceptions.Abort):
+                click.echo()
+                click.echo("Goodbye! Thanks for chatting.")
+                return
+
+            if question.lower() in ["exit", "quit"]:
+                click.echo("\nGoodbye! Thanks for chatting.")
+                return
+
             # Get response (from cache or LLM)
             response, from_cache, cache_info = await cache_manager.get_response(
                 question=question,
