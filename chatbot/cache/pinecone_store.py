@@ -196,7 +196,9 @@ class PineconeVectorStore(BaseVectorStore):
         try:
             print(f"Starting cleanup for Pinecone index: {self.config.index_name}")
             print(f"Namespace: {self.config.namespace}")
-            print(f"TTL days: {self.config.ttl_days if self.config.ttl_days is not None else 'None (deleting all)'}")
+            print(
+                f"TTL days: {self.config.ttl_days if self.config.ttl_days is not None else 'None (deleting all)'}"
+            )
 
             # Get initial count
             stats = self.index.describe_index_stats()
@@ -273,7 +275,7 @@ class PineconeVectorStore(BaseVectorStore):
                     return 0
 
                 print(f"Found {len(old_vector_ids)} entries to remove")
-                
+
                 # Delete in batches
                 batch_size = 100
                 for i in range(0, len(old_vector_ids), batch_size):

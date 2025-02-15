@@ -53,7 +53,8 @@ class PgVectorStore(BaseVectorStore):
             cur.execute("CREATE EXTENSION IF NOT EXISTS vector")
 
             # Create cache table if it doesn't exist
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE TABLE IF NOT EXISTS chatbot (
                     id SERIAL PRIMARY KEY,
                     question TEXT NOT NULL,
@@ -63,14 +64,17 @@ class PgVectorStore(BaseVectorStore):
                     timestamp DOUBLE PRECISION NOT NULL,
                     embedding vector(1536) NOT NULL
                 )
-            """)
+            """
+            )
 
             # Create index for vector similarity search
-            cur.execute("""
+            cur.execute(
+                """
                 CREATE INDEX IF NOT EXISTS chatbot_embedding_idx 
                 ON chatbot 
                 USING ivfflat (embedding vector_cosine_ops)
-            """)
+            """
+            )
 
             conn.commit()
             cur.close()
@@ -171,12 +175,14 @@ class PgVectorStore(BaseVectorStore):
 
             entries = []
             for row in results:
-                if row[5] >= self.config.similarity_threshold:  # similarity is at index 5
+                if (
+                    row[5] >= self.config.similarity_threshold
+                ):  # similarity is at index 5
                     entry = CacheEntry(
                         question=row[0],  # question
-                        answer=row[1],    # answer
+                        answer=row[1],  # answer
                         provider=row[2],  # provider
-                        timestamp=row[3], # timestamp
+                        timestamp=row[3],  # timestamp
                         embedding=row[4],  # embedding
                     )
                     entries.append((entry, row[5]))  # row[5] is similarity
@@ -194,7 +200,9 @@ class PgVectorStore(BaseVectorStore):
         try:
             print(f"Starting cleanup for pgvector collection: {self.config.index_name}")
             print(f"Namespace: {self.config.namespace}")
-            print(f"TTL days: {self.config.ttl_days if self.config.ttl_days is not None else 'None (deleting all)'}")
+            print(
+                f"TTL days: {self.config.ttl_days if self.config.ttl_days is not None else 'None (deleting all)'}"
+            )
 
             conn = psycopg2.connect(**self.conn_params)
             try:

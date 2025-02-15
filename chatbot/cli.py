@@ -211,13 +211,18 @@ def cleanup(
         click.echo(f"Vector store: {config.cache.vector_store.value}")
         click.echo(f"Index: {config.cache.index_name}")
         click.echo(f"Namespace: {config.cache.namespace}")
-        click.echo(f"TTL days: {config.cache.ttl_days if config.cache.ttl_days is not None else 'None (deleting all)'}")
+        click.echo(
+            f"TTL days: {config.cache.ttl_days if config.cache.ttl_days is not None else 'None (deleting all)'}"
+        )
         click.echo()
 
         # Run cleanup
         removed = asyncio.run(cache_manager.cleanup())
         click.echo()
-        click.secho(f"Removed {removed} old cache entries", fg="green" if removed > 0 else "yellow")
+        click.secho(
+            f"Removed {removed} old cache entries",
+            fg="green" if removed > 0 else "yellow",
+        )
 
     except Exception as e:
         click.secho(f"Error: {str(e)}", fg="red")

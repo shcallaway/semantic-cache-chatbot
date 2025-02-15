@@ -139,12 +139,14 @@ class Config:
             if not self.cache.qdrant_url:
                 raise ValueError("QDRANT_URL is required when using Qdrant")
         elif self.cache.vector_store == VectorStoreType.PGVECTOR:
-            if not all([
-                self.cache.postgres_host,
-                self.cache.postgres_user,
-                self.cache.postgres_password,
-                self.cache.postgres_db
-            ]):
+            if not all(
+                [
+                    self.cache.postgres_host,
+                    self.cache.postgres_user,
+                    self.cache.postgres_password,
+                    self.cache.postgres_db,
+                ]
+            ):
                 raise ValueError(
                     "PostgreSQL connection settings (POSTGRES_HOST, POSTGRES_USER, "
                     "POSTGRES_PASSWORD, POSTGRES_DB) are required when using pgvector"

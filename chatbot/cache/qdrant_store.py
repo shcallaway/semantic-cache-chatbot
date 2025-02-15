@@ -77,7 +77,8 @@ class QdrantVectorStore(BaseVectorStore):
             collection_name=self.config.index_name,
             points=[
                 models.PointStruct(
-                    id=abs(hash(question)) % (2**63),  # Convert to positive integer within safe range
+                    id=abs(hash(question))
+                    % (2**63),  # Convert to positive integer within safe range
                     vector=embedding,
                     payload={
                         "question": question,
@@ -150,7 +151,9 @@ class QdrantVectorStore(BaseVectorStore):
         try:
             print(f"Starting cleanup for Qdrant collection: {self.config.index_name}")
             print(f"Namespace: {self.config.namespace}")
-            print(f"TTL days: {self.config.ttl_days if self.config.ttl_days is not None else 'None (deleting all)'}")
+            print(
+                f"TTL days: {self.config.ttl_days if self.config.ttl_days is not None else 'None (deleting all)'}"
+            )
 
             # Prepare the filter
             if self.config.ttl_days is None or self.config.ttl_days <= 0:

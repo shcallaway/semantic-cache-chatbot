@@ -17,7 +17,9 @@ from chatbot.config import Config, CacheConfig, VectorStoreType
 from chatbot.providers.base import LLMProvider
 
 
-@pytest.fixture(params=[VectorStoreType.PINECONE, VectorStoreType.QDRANT, VectorStoreType.PGVECTOR])
+@pytest.fixture(
+    params=[VectorStoreType.PINECONE, VectorStoreType.QDRANT, VectorStoreType.PGVECTOR]
+)
 def vector_store_type(request):
     """Parameterized fixture for testing both vector store types."""
     return request.param
