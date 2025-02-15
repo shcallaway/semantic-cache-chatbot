@@ -35,69 +35,82 @@ python -m pip install -e .
 
 ### Pinecone
 
-1. Create account at [pinecone.io](https://www.pinecone.io)
-2. Create index with:
+1. Create an account at [pinecone.io](https://www.pinecone.io)
+2. Create a new index with the following settings:
    - Name: `chatbot`
    - Dimensions: 1536
    - Metric: Cosine
    - Pod Type: Starter (free tier)
-3. Copy API key from console
+3. Copy your API key from the console
 
 ### Qdrant
 
-Choose one:
+Qdrant can be used locally or in the cloud.
 
-- Local: Run `docker run -p 6333:6333 qdrant/qdrant`
-- Cloud: Setup at [cloud.qdrant.io](https://cloud.qdrant.io) and copy API key
+Local:
+
+```bash
+# Install Docker (if not already installed)
+brew install docker
+
+# Pull the latest Qdrant image
+docker pull qdrant/qdrant
+
+# Run a new Qdrant container and expose port 6333 to the host
+docker run -p 6333:6333 qdrant/qdrant
+```
+
+Cloud:
+
+1. Create an account at [cloud.qdrant.io](https://cloud.qdrant.io)
+2. Copy your API key from the console
 
 ### pgvector
 
 1. Install PostgreSQL and pgvector:
 
 ```bash
-brew install postgresql@15 pgvector
+# Install PostgreSQL
+brew install postgresql@15
+
+# Install pgvector
+brew install pgvector
 ```
 
-2. Create database:
+2. Create a new PSQL database:
 
 ```bash
 createdb chatbot
 psql chatbot
 ```
 
-3. Start PostgreSQL shell:
+3. Create the pgvector extension and a new user:
 
 ```bash
-psql
-```
+# Start a psql shell
+psql -d chatbot
 
-4. Create pgvector extension:
-
-```bash
+# Create the pgvector extension
 CREATE EXTENSION vector;
-```
 
-5. Create user:
-
-```bash
+# Create a new user
 CREATE USER chatbot WITH PASSWORD 'password';
+
+# Grant all privileges to the new user
 GRANT ALL PRIVILEGES ON DATABASE chatbot TO chatbot;
-```
 
-6. Exit PostgreSQL shell:
-
-```bash
+# Exit the shell
 \q
 ```
 
-## Configuration
+## Environment Variables
 
-Create a `.env` file with by copying `.env.example` and filling in the missing values.
+Create a `.env` file by copying `.env.example` and filling in the missing values.
 
 ## Usage
 
 ```bash
-# Activate virtual environment (if not already active)
+# Activate virtual environment
 source venv/bin/activate
 
 # Run the chatbot CLI
@@ -109,26 +122,29 @@ deactivate
 
 ## Development
 
-### Code Linting
+### Code Formatting
 
-The project uses black for code formatting and flake8 for style checking:
+The project uses black for code formatting:
 
 ```bash
-# Format code with black
 black .
+```
 
-# Run linting with flake8
+Configuration for black can be found in `pyproject.toml` and `.black.toml`.
+
+### Code Linting
+
+The project uses flake8 for linting:
+
+```bash
 flake8
 ```
 
-Configuration files:
-
-- `.flake8`: Flake8 configuration with 88 character line length to match black
-- `pyproject.toml`: Black configuration and build settings
+Configuration for flake8 can be found in `.flake8`.
 
 ### Running Tests
 
-The project uses pytest with async support for testing:
+The project uses pytest for testing:
 
 ```bash
 # Run tests with verbose output
